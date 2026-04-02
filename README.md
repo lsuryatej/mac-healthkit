@@ -1,126 +1,149 @@
 # mac-healthkit
 
-A suite of bash scripts for macOS Apple Silicon that does what paid tools like **iStatMenus**, **CleanMyMac**, and **Sensei** lock behind paywalls — using only native macOS tools.
+> A free, open-source Mac health toolkit for Apple Silicon — no subscriptions, no cloud, no dependencies.
 
-**Zero dependencies. Zero cloud. Zero install beyond cloning the repo.**
+Does what **iStatMenus**, **CleanMyMac**, and **Sensei** charge $10–$40/year for, using only tools your Mac already ships with.
 
----
+![Engineer mode health check](docs/screenshots/engineer-1.png)
+![Engineer mode — AT A GLANCE and suggested actions](docs/screenshots/engineer-4.png)
 
-## Why this exists
-
-Every paid Mac monitoring app charges $10–$40/year to show you information your Mac already exposes for free via `ps`, `vm_stat`, `memory_pressure`, `powermetrics`, and `launchd`. This project wires those tools together into a cohesive, automatable toolkit aimed at Apple Silicon Macs (M1 through M5).
 
 ---
 
-## What's included
+## What it does
 
-| Script | What it does | Runs |
-|---|---|---|
-| `mac_check.sh` | Full on-demand health diagnostic | On demand |
-| `mac_logger.sh` | Appends one CSV row of health metrics | Every 5 min (launchd) |
-| `mac_weekly_report.sh` | Reads the CSV log, outputs trend summary | On demand |
-| `mac_disk_diff.sh` | Snapshots `~/Library` dirs, diffs vs last week | On demand |
-| `mac_watch.sh` | Passive alerter — sends native notifications on threshold breach | Every 10 min (launchd) |
-| `personas/engineer.sh` | `mac_check.sh` in terse, PID-level dev mode | On demand |
-| `personas/designer.sh` | `mac_check.sh` in plain-English, emoji mode | On demand |
+- **On-demand health check** — CPU load, memory pressure, swap, GPU, thermal, battery, top processes, known app culprits, and suggested fixes in one report
+- **Three output modes** — raw engineer data, plain English, or Girly Pop 🎀 (creative-tool-aware, zero jargon)
+- **Background logger** — silently appends one CSV row every 5 minutes via launchd
+- **Weekly trend report** — reads that log and shows how your Mac has been behaving over time
+- **Disk growth check** — diffs `~/Library` against last week, flags what's eating space, suggests fix commands
+- **Native notifications** — alerts on threshold breaches without any notification library or menu bar app
+- **Interactive menu** — a guided questionnaire so you don't have to memorise any flags
 
 ---
 
 ## Requirements
 
-- macOS 14 Sonoma or 15 Sequoia
-- Apple Silicon (M1/M2/M3/M4/M5) — Intel Macs will mostly work but are untested
-- No Homebrew, no Python, no npm, no nothing
+- Apple Silicon (M1 / M2 / M3 / M4 / M5)
+- macOS 14 Sonoma, macOS 15 Sequoia, or macOS 26 Tahoe
+- Nothing else — no Homebrew, no Python, no npm
+
+> **Intel Macs:** most scripts will run, but metrics are tuned for Apple Silicon and results are untested on Intel.
 
 ---
 
 ## Install
 
 ```bash
-git clone https://github.com/yourusername/mac-healthkit.git
+git clone https://github.com/lsuryatej/mac-healthkit.git
 cd mac-healthkit
 bash install/install.sh
 ```
 
-This will:
-- Make all scripts executable
-- Copy the two launchd plists to `~/Library/LaunchAgents/`
-- Load both agents (logger + watcher)
-- Create `~/.mac-healthkit/logs/` and `~/.mac-healthkit/snapshots/`
+The installer:
+- Makes all scripts executable
+- Copies two launchd plists to `~/Library/LaunchAgents/`
+- Loads the background logger (every 5 min) and watcher (every 10 min)
+- Creates `~/.mac-healthkit/logs/` and `~/.mac-healthkit/snapshots/`
 
 ---
 
-## How to run each script
+## Quick start
 
-### On-demand health check
+The fastest way in is the interactive menu:
 
 ```bash
+bash scripts/mac_menu.sh
+```
+
+It detects your current setup (power source, display count, whether you just woke the machine), asks how you want to see output, runs the check, and offers follow-up actions — no flags needed.
+
+---
+
+## Running scripts directly
+
+```bash
+# Full health check (picks up a persona flag)
 bash scripts/mac_check.sh
-```
+bash scripts/mac_check.sh --persona engineer
+bash scripts/mac_check.sh --persona plaintext
+bash scripts/mac_check.sh --persona girlypop
 
-For power draw (requires sudo):
+# Persona shortcuts
+bash personas/engineer.sh
+bash personas/plaintext.sh
+bash personas/girlypop.sh
 
-```bash
-sudo bash scripts/mac_check.sh
-```
-
-### Persona views
-
-```bash
-bash personas/engineer.sh   # terse, numbered, PID-level
-bash personas/designer.sh   # plain English, traffic-light emojis
-```
-
-### Weekly trend report
-
-```bash
+# Weekly trend report (requires at least a few hours of logged data)
 bash scripts/mac_weekly_report.sh
-```
 
-Reads `~/.mac-healthkit/logs/health.csv`. Shows:
-- Load average trends (avg, peak, distribution)
-- Memory pressure distribution (% of time healthy/moderate/critical)
-- Top 5 most frequent CPU offenders
-- Top 5 worst memory events with timestamps
-- Swap event count
-
-### Disk diff
-
-```bash
+# Disk growth diff
 bash scripts/mac_disk_diff.sh
 ```
 
-First run takes a snapshot. Subsequent runs compare against the most recent snapshot and flag any `~/Library` subdirectory that grew by more than 500 MB, with specific fix commands for known bloat sources (Claude vm_bundles, Chrome OptimizationGuide, Docker images, Xcode DerivedData).
+---
+
+## The three output modes
+
+### Engineer
+Raw numbers, PIDs, exact MB, process paths. Status labels like `▶ nominal` / `▶ CRITICAL`. Kill commands ready to copy-paste. Assumes you know what you're looking at.
+
+### Plain English
+Traffic-light emojis (🟢 🟡 🔴), plain sentences, rounded numbers. "Your Mac is working very hard right now" instead of load averages. Suggests specific actions without assuming Terminal fluency.
+
+### Girly Pop 🎀
+
+![Girlypop mode](docs/screenshots/girlypop-1.png)
+![Girlypop mode — suggested actions](docs/screenshots/girlypop-4.png)
+
+Built for designers and creative professionals. Detects if Photoshop, After Effects, Figma, Premiere, or Lightroom is running and tailors the output to those tools specifically. Friendly slang, emoji indicators, zero jargon. High RAM? *"bestie your Mac is holding onto everything like it has abandonment issues."*
 
 ---
 
-## The persona system
+## Context-aware adjustments
 
-`mac_check.sh` accepts a `--persona` flag:
+Before running, the toolkit reads your current setup and adjusts thresholds accordingly:
 
-```bash
-bash scripts/mac_check.sh --persona engineer   # default
-bash scripts/mac_check.sh --persona designer
-```
-
-**Engineer persona:**
-- Numbered sections `[01]` through `[06]`
-- Status labels: `▶ nominal`, `▶ elevated`, `▶ CRITICAL`
-- Shows PIDs, exact MB, raw process paths alongside normalised names
-- No hand-holding, just data and kill commands
-
-**Designer persona:**
-- Traffic-light emojis: 🟢 🟡 🔴
-- Plain English — "Your Mac is working very hard right now"
-- Hides PIDs, rounds MB to nearest 100
-- One-sentence explanation per finding
-- Fix commands labelled "run this in Terminal"
-
-The `personas/` wrappers are thin one-liners — the logic lives entirely in `mac_check.sh`.
+| Context | What changes |
+|---|---|
+| On battery | Battery warnings trigger earlier |
+| Multiple external displays | GPU "active" threshold scales up (each display costs GPU budget) |
+| Just woken from sleep | A notice appears; metrics may be temporarily spiked |
+| Video call active (Zoom / Teams / Meet) | Noted in the header so you know why CPU is elevated |
 
 ---
 
-## How the logger + weekly report work together
+## What the health check covers
+
+| Section | What's measured |
+|---|---|
+| CPU | Load averages (1m / 5m / 15m), top CPU process |
+| Memory | Free %, swap used, swap events, compressed pages, top memory process |
+| GPU | Utilisation % via ioreg, context-adjusted thresholds |
+| Thermal | kern.thermalevel — whether the machine is throttling |
+| Battery | Charge %, battery health %, charge cycle awareness |
+| Processes | Energy impact ranking via `top`, background agents |
+| Known culprits | Per-app detection (see table below) |
+| Suggested actions | Only shown when something actually needs attention |
+
+### Known culprit detection
+
+| App / Process | What's detected | Suggested fix |
+|---|---|---|
+| iWork (Pages / Numbers / Keynote) | RSS > 1.5 GB | Quit and reopen |
+| Notion GPU Helper | > 10% CPU | `killall 'Notion Helper (GPU)'` |
+| iCloud `bird` | > 20% CPU | `killall bird` |
+| Spotlight (`mds_stores`) | > 8 indexing processes | `sudo mdutil -a -i off && on` |
+| WebKit tabs | Any WebContent > 500 MB | Close tabs |
+| Brave renderer flood | > 8 renderer processes | Close tabs |
+| Docker | Combined > 10% CPU | `docker stats --no-stream` |
+| Python / Jupyter | Combined > 20% CPU | Check running notebooks |
+| Node.js / Next.js dev server | Combined > 15% CPU | Check dev servers |
+| VPN client | > 300 MB RAM | Restart VPN client |
+
+---
+
+## Background logger + weekly report
 
 ```
 launchd (every 5 min)
@@ -132,62 +155,52 @@ You (any time)
         └─▶ reads health.csv → trend analysis
 ```
 
-CSV format:
-```
-timestamp, load_1m, load_5m, load_15m, mem_free_pct, swap_out_total,
-compressed_pages, top_cpu_proc, top_cpu_pct, top_mem_proc, top_mem_mb, cpu_power_mw
-```
+![Weekly trend report](docs/screenshots/weekly-1.png)
 
-Log rotation: when `health.csv` exceeds 50 MB it is moved to `health.csv.1` and a fresh file starts.
+The weekly report shows:
+- Average and peak load averages for the period
+- Memory pressure distribution (% of time healthy / warning / critical)
+- Top CPU offenders by frequency
+- Worst memory events with timestamps
+- Swap event count, GPU and thermal history (if logged)
+
+Log rotation kicks in at 50 MB — `health.csv` is moved to `health.csv.1` and a fresh file starts.
 
 ---
 
-## Background watcher
+## Native notifications (no app required)
 
-`mac_watch.sh` runs every 10 minutes via launchd. It sends native macOS notifications (no third-party notification library) when:
+`mac_watch.sh` runs every 10 minutes via launchd and fires macOS notifications when:
 
-| Threshold | Alert |
+| Condition | Alert |
 |---|---|
-| Load avg (1m) > 6 | Notification with top process name |
-| Free memory < 15% | Notification with top memory process |
-| Any process > 3 GB RAM | Notification with process name + kill command |
-| Any WebKit tab > 800 MB | Notification with PID |
+| Load avg (1m) > 6 | Top process name |
+| Free memory < 15% | Top memory process |
+| Any process > 3 GB RAM | Process name + kill command |
+| Any WebKit tab > 800 MB | PID |
 
-**Debounce:** the same alert won't fire again for 30 minutes. State is stored in `~/.mac-healthkit/watch_state.txt`.
-
----
-
-## Known culprit detection
-
-`mac_check.sh` checks for these specific known issues on every run:
-
-| Culprit | Detection | Fix |
-|---|---|---|
-| iWork RAM leak (Pages/Numbers/Keynote) | RSS > 1.5 GB | Quit and reopen the app |
-| Notion GPU Helper polling bug | GPU helper > 10% CPU | `killall 'Notion Helper (GPU)'` |
-| iCloud bird heavy sync | bird > 20% CPU | `killall bird` |
-| Spotlight overload | >8 mdworker/mds_stores procs | `sudo mdutil -a -i off && on` |
-| Heavy WebKit tabs | Any WebContent > 500 MB | Close tabs |
-| Brave renderer flood | >8 Brave renderer procs | Close tabs |
-| Docker CPU hog | Docker > 10% CPU combined | `docker stats --no-stream` |
-| Python/Jupyter runaway | Python > 20% CPU combined | Check running scripts |
-| Node.js / Next.js | Node > 15% CPU combined | Check dev servers |
-| VPN memory leak | VPN processes > 300 MB | Restart VPN client |
+The same alert won't fire again for 30 minutes (debounced via `~/.mac-healthkit/watch_state.txt`).
 
 ---
 
-## Process name normalisation
+## Comparison with paid tools
 
-Raw macOS process names are normalised for readability:
+| Feature | mac-healthkit | iStatMenus ($10/yr) | CleanMyMac ($40/yr) | Sensei ($29/yr) |
+|---|---|---|---|---|
+| CPU / memory / GPU stats | ✅ | ✅ | ✅ | ✅ |
+| Named process breakdown | ✅ | ✅ | ⚠️ basic | ✅ |
+| Known app culprit detection | ✅ | ❌ | ❌ | ❌ |
+| Background CSV logging | ✅ | ❌ | ❌ | ❌ |
+| Weekly trend report | ✅ | ❌ | ❌ | ❌ |
+| Disk growth diff | ✅ | ❌ | ✅ | ⚠️ basic |
+| Native notifications | ✅ | ✅ | ❌ | ❌ |
+| Multiple output personas | ✅ | ❌ | ❌ | ❌ |
+| Interactive menu | ✅ | ❌ | ❌ | ❌ |
+| Zero install / no dependencies | ✅ | ❌ | ❌ | ❌ |
+| Open source | ✅ GPL-3.0 | ❌ | ❌ | ❌ |
+| Price | **Free** | $10/yr | $40/yr | $29/yr |
 
-| Raw name | Normalised |
-|---|---|
-| `WebKit.WebContent` / `WebContent` | `Safari Tab` |
-| `Brave.*Renderer` | `Brave Tab` |
-| `mds_stores` / `mdworker` | `Spotlight` |
-| `bird` | `iCloud Sync` |
-| `kernel_task` | `kernel [skip]` |
-| `sysmond` | `sysmond [skip]` |
+> Paid tool comparisons are based on publicly documented features as of early 2026. If anything here is inaccurate, open an issue.
 
 ---
 
@@ -197,7 +210,7 @@ Raw macOS process names are normalised for readability:
 bash install/install.sh --uninstall
 ```
 
-This unloads the launchd agents, removes the plists from `~/Library/LaunchAgents/`, and leaves your log data intact. To also remove logs:
+Unloads the launchd agents and removes the plists. Your log data is left untouched. To remove everything:
 
 ```bash
 rm -rf ~/.mac-healthkit
@@ -205,35 +218,29 @@ rm -rf ~/.mac-healthkit
 
 ---
 
-## Comparison vs paid tools
+## Project layout
 
-| Feature | mac-healthkit | iStatMenus ($10/yr) | CleanMyMac ($40/yr) | Sensei ($29/yr) |
-|---|---|---|---|---|
-| Live CPU / memory stats | ✅ | ✅ | ✅ | ✅ |
-| Named process breakdown | ✅ | ✅ | ⚠️ basic | ✅ |
-| Known app culprit detection | ✅ | ❌ | ❌ | ❌ |
-| Background CSV logging | ✅ | ❌ | ❌ | ❌ |
-| Weekly trend report | ✅ | ❌ | ❌ | ❌ |
-| Disk growth diff | ✅ | ❌ | ✅ paid | ⚠️ basic |
-| Native notifications (no app) | ✅ | ✅ | ❌ | ❌ |
-| Persona output modes | ✅ | ❌ | ❌ | ❌ |
-| `powermetrics` power draw | ✅ (sudo) | ✅ | ❌ | ✅ |
-| Zero install / dependencies | ✅ | ❌ | ❌ | ❌ |
-| Open source | ✅ GPL-3.0 | ❌ | ❌ | ❌ |
-| Price | **Free** | $10/yr | $40/yr | $29/yr |
-
----
-
-## `NO_COLOR` support
-
-All colored output is suppressed when the `NO_COLOR` environment variable is set (per [no-color.org](https://no-color.org)):
-
-```bash
-NO_COLOR=1 bash scripts/mac_check.sh
+```
+mac-healthkit/
+├── scripts/
+│   ├── mac_check.sh          # on-demand health diagnostic
+│   ├── mac_logger.sh         # background CSV logger (runs via launchd)
+│   ├── mac_watch.sh          # threshold watcher + notifications (runs via launchd)
+│   ├── mac_weekly_report.sh  # trend report from logged data
+│   ├── mac_disk_diff.sh      # ~/Library growth diff
+│   └── mac_menu.sh           # interactive menu
+├── personas/
+│   ├── engineer.sh           # shortcut → mac_check.sh --persona engineer
+│   ├── plaintext.sh          # shortcut → mac_check.sh --persona plaintext
+│   └── girlypop.sh           # shortcut → mac_check.sh --persona girlypop
+└── install/
+    ├── install.sh
+    ├── com.machealthkit.logger.plist
+    └── com.machealthkit.watch.plist
 ```
 
 ---
 
 ## License
 
-GPL-3.0. You can use, modify, and redistribute this freely. You may **not** incorporate it into a proprietary or paid product without releasing your modifications under the same license. See [LICENSE](LICENSE) for the full text.
+GPL-3.0. Free to use, modify, and redistribute. You may **not** incorporate this into a proprietary or paid product without releasing your modifications under the same license. See [LICENSE](LICENSE) for the full text.
