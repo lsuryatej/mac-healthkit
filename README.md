@@ -10,6 +10,46 @@ Does what **iStatMenus**, **CleanMyMac**, and **Sensei** charge $10–$40/year f
 
 ---
 
+## New to this? Start here
+
+Never used Terminal before? No problem. This takes about 2 minutes.
+
+**Step 1 — Check your Mac**
+
+Click the Apple logo () in the top-left corner → **About This Mac**. You need an Apple Silicon Mac (M1, M2, M3, M4, or M5 chip). If it says Intel, this tool isn't for you.
+
+**Step 2 — Open Terminal**
+
+Press `Cmd + Space`, type `Terminal`, hit Enter. A black (or white) window will open. That's Terminal — it's just a text interface to your Mac, it can't break anything by itself.
+
+**Step 3 — Install**
+
+Paste this into Terminal and hit Enter:
+
+```bash
+git clone https://github.com/lsuryatej/mac-healthkit.git && cd mac-healthkit && bash install/install.sh
+```
+
+It will print a few lines confirming setup. No passwords required, nothing is sent anywhere.
+
+**Step 4 — Run it**
+
+From now on, just type this anywhere in Terminal:
+
+```bash
+mhk
+```
+
+A menu will appear. Pick your output style, follow the prompts. That's it.
+
+**Step 5 — Weekly check-in**
+
+After a day or two, run `mhk` again and choose **Weekly trend report** from the menu to see how your Mac has been performing over time.
+
+> If Terminal ever says `command not found: mhk`, open a new Terminal window and try again — or re-run the install command from Step 3.
+
+---
+
 ## What it does
 
 - **On-demand health check** — CPU load, memory pressure, swap, GPU, thermal, battery, top processes, known app culprits, and suggested fixes in one report
@@ -42,6 +82,7 @@ bash install/install.sh
 
 The installer:
 - Makes all scripts executable
+- Installs the `mhk` command to `/usr/local/bin/` so you can run it from anywhere
 - Copies two launchd plists to `~/Library/LaunchAgents/`
 - Loads the background logger (every 5 min) and watcher (every 10 min)
 - Creates `~/.mac-healthkit/logs/` and `~/.mac-healthkit/snapshots/`
@@ -50,13 +91,11 @@ The installer:
 
 ## Quick start
 
-The fastest way in is the interactive menu:
-
 ```bash
-bash scripts/mac_menu.sh
+mhk
 ```
 
-It detects your current setup (power source, display count, whether you just woke the machine), asks how you want to see output, runs the check, and offers follow-up actions — no flags needed.
+The interactive menu detects your current setup (power source, display count, whether you just woke the machine), asks how you want to see output, runs the check, and offers follow-up actions — no flags needed.
 
 ---
 

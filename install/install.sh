@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — Setup and teardown for mac-healthkit
-# Part of mac-healthkit: https://github.com/yourusername/mac-healthkit
+# Part of mac-healthkit: https://github.com/lsuryatej/mac-healthkit
 # License: GPL-3.0
 set -euo pipefail
 
@@ -43,6 +43,11 @@ if [[ "${1:-}" == "--uninstall" ]]; then
     fi
   done
 
+  if [ -f "/usr/local/bin/mhk" ]; then
+    rm -f "/usr/local/bin/mhk"
+    echo -e "  ${GREEN}✓${RESET} Removed: /usr/local/bin/mhk"
+  fi
+
   echo ""
   echo -e "  ${YELLOW}Note:${RESET} Your log data is kept at $DATA_DIR"
   echo "  To also remove logs and snapshots:"
@@ -62,11 +67,13 @@ echo ""
 SCRIPTS=(
   "$REPO_ROOT/scripts/mac_check.sh"
   "$REPO_ROOT/scripts/mac_logger.sh"
+  "$REPO_ROOT/scripts/mac_menu.sh"
   "$REPO_ROOT/scripts/mac_weekly_report.sh"
   "$REPO_ROOT/scripts/mac_disk_diff.sh"
   "$REPO_ROOT/scripts/mac_watch.sh"
   "$REPO_ROOT/personas/engineer.sh"
-  "$REPO_ROOT/personas/designer.sh"
+  "$REPO_ROOT/personas/plaintext.sh"
+  "$REPO_ROOT/personas/girlypop.sh"
 )
 
 for script in "${SCRIPTS[@]}"; do
@@ -78,6 +85,16 @@ done
 mkdir -p "$LOG_DIR" "$SNAP_DIR"
 echo -e "  ${GREEN}✓${RESET} Created: $LOG_DIR"
 echo -e "  ${GREEN}✓${RESET} Created: $SNAP_DIR"
+
+# ── Install mhk command ───────────────────────────────────────────────────────
+MHK_BIN="/usr/local/bin/mhk"
+mkdir -p /usr/local/bin
+cat > "$MHK_BIN" <<WRAPPER
+#!/usr/bin/env bash
+exec "${REPO_ROOT}/scripts/mac_menu.sh" "\$@"
+WRAPPER
+chmod +x "$MHK_BIN"
+echo -e "  ${GREEN}✓${RESET} Installed command: mhk → $MHK_BIN"
 
 # Create LaunchAgents dir if needed
 mkdir -p "$LAUNCH_AGENTS_DIR"
@@ -108,17 +125,10 @@ echo "────────────────────────�
 echo ""
 echo -e "${BOLD}How to use:${RESET}"
 echo ""
-echo "  On-demand health check (engineer view):"
-echo "    bash $REPO_ROOT/scripts/mac_check.sh"
+echo "  Just type:"
+echo "    mhk"
 echo ""
-echo "  Non-technical / designer view:"
-echo "    bash $REPO_ROOT/personas/designer.sh"
-echo ""
-echo "  Weekly trend report:"
-echo "    bash $REPO_ROOT/scripts/mac_weekly_report.sh"
-echo ""
-echo "  Disk growth diff:"
-echo "    bash $REPO_ROOT/scripts/mac_disk_diff.sh"
+echo "  That's it. The interactive menu will guide you from there."
 echo ""
 echo "  Background logger runs every 5 min automatically (launchd)."
 echo "  Background watcher alerts via macOS notifications every 10 min (launchd)."
